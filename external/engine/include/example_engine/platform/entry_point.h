@@ -10,7 +10,7 @@
 
 int main(){
     
-    auto* theGame = CreateGame();
+    auto* theGame = ONI::CreateGame();
 
     theGame->run();
 

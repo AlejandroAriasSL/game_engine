@@ -1,6 +1,8 @@
 #include <example_engine/platform/entry_point.h>
 #include <example_engine/platform/game.hpp>
 
+using namespace ONI;
+
 class ExampleGame : public Game {
 public:
   explicit ExampleGame(std::string title) : Game(std::move(title)) {
@@ -14,6 +16,6 @@ protected:
 };
 
 
-Game* CreateGame() {
+Game* ONI::CreateGame() {
     return new ExampleGame("Game Window");
 };

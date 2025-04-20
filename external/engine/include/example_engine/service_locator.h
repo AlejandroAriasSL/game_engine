@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <example_engine/platform/window.h>
+#include <example_engine/rendering/renderer.h>
 
 /*
 *  La clase ServiceLocator es responsable de gestionar la instancia única de la ventana del juego.
@@ -9,6 +10,8 @@
    - GetWindow: Devuelve una referencia a la ventana, si no ha sido proporcionada, devuelve nullptr.
    - ShutdownServices: Limpia los servicios, en particular, borra la referencia a la ventana.   
 */ 
+
+namespace ONI {
 class ServiceLocator{
 private:
     static inline std::unique_ptr<Window> _window = nullptr;
@@ -29,3 +32,4 @@ public:
         shutdownWindow();
     }
 };
+}

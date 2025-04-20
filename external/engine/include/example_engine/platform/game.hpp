@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 //Queremos darle acceso a nuestro main.cpp (nuestro cliente) para que pueda crear juegos utilizando nuestro motor 
-
+namespace ONI{
 class Game {
 protected:
   virtual void PhysicsUpdate(float deltaTTime) {};
@@ -23,3 +23,4 @@ private:
 };
 
 extern Game* CreateGame();
+}

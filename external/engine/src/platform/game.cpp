@@ -2,7 +2,7 @@
 #include "example_engine/service_locator.h"
 #include "multiplatform_window.h"
 
-
+namespace ONI {
 // Constructor por defecto: Llama al constructor con un solo parámetro para inicializar el título de la ventana a "Game window"
 Game::Game() : Game("Game window") {};
 
@@ -42,3 +42,4 @@ void Game::initializeServices() {
 void Game::shutdownServices() {
   ServiceLocator::ShutdownServices();
 };
+}

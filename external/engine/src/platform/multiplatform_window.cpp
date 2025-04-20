@@ -1,5 +1,6 @@
 #include "multiplatform_window.h"
 
+namespace ONI {
 //Al incializar la ventana se asigna un null pointer a la ventana
 MultiPlatformWindow::MultiPlatformWindow(){
     _window = nullptr;
@@ -16,6 +17,12 @@ MultiPlatformWindow::MultiPlatformWindow(){
  */
 void MultiPlatformWindow::OpenWindow(WindowData data){
     glfwInit();
+
+    // Desactivar OpenGL para utilizar Vulkan
+    //TODO: Definir y proveer un renderer, establecer personalziación y gestión de entrada de usuario
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
     _window = glfwCreateWindow(static_cast<int>(data.width), static_cast<int>(data.height), data.title.c_str(), nullptr, nullptr);
 };
 
@@ -25,3 +32,4 @@ bool MultiPlatformWindow::Update(){
 
     return glfwWindowShouldClose(_window);
 };
+}
