@@ -18,6 +18,7 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> #Esta interfaz se lee desde donde quiera que se esté haciendo el build
         glm
     PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${Vulkan_INCLUDE_DIRS}
         glfw
         vk-bootstrap

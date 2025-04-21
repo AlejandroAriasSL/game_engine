@@ -15,15 +15,23 @@ MultiPlatformWindow::MultiPlatformWindow(){
  *       - width: Ancho de la ventana.
  *       - height: Alto de la ventana.
  */
-void MultiPlatformWindow::OpenWindow(WindowData data){
-    glfwInit();
+void MultiPlatformWindow::OpenWindow(WindowData data){ 
+
+    glfwSetErrorCallback(MultiPlatformWindow::errorCallback);
+    
+    if(!glfwInit()) {
+        throw std::runtime_error("Failed to initialize GLFW");
+    }
 
     // Desactivar OpenGL para utilizar Vulkan
     //TODO: Definir y proveer un renderer, establecer personalziación y gestión de entrada de usuario
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
     _window = glfwCreateWindow(static_cast<int>(data.width), static_cast<int>(data.height), data.title.c_str(), nullptr, nullptr);
+    
+    if (!_window) {
+        throw std::runtime_error("Failed to create GLFW window");
+    }
 };
 
 //Este método se encarga de registrar los eventos que ocurren en la ventana mediante el contrato de GLFW

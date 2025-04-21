@@ -3,6 +3,8 @@
 
 #include <example_engine/platform/window.h>
 #include <GLFW/glfw3.h>
+#include <iostream>
+
 namespace ONI {
 class MultiPlatformWindow : public Window {
 private:
@@ -11,5 +13,8 @@ public:
     MultiPlatformWindow();
     void OpenWindow(WindowData data) override;
     bool Update() override;
+    static inline void errorCallback(int error, const char* description){
+        std::cerr << "GLFW Error" << error << description << std::endl;
+    }
 };
 }

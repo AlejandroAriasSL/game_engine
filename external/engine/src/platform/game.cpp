@@ -41,5 +41,6 @@ void Game::initializeServices() {
 // Destruye los servicios y limpia los recursos utilizados por el juego.
 void Game::shutdownServices() {
   ServiceLocator::ShutdownServices();
+  glfwTerminate();
 };
 }

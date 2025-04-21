@@ -12,7 +12,12 @@ int main(){
     
     auto* theGame = ONI::CreateGame();
 
-    theGame->run();
-
+    try {
+        theGame->run();
+    } catch (const std::exception& e) {
+        std::cerr << "Error al abrir la ventana: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    };    
+    
     delete theGame;
 };
