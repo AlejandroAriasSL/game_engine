@@ -39,5 +39,31 @@ bool MultiPlatformWindow::Update(){
     glfwPollEvents();
 
     return glfwWindowShouldClose(_window);
+}
+
+std::pair<int, int> MultiPlatformWindow::GetWindowExtents(){
+    int width, height;
+    glfwGetFramebufferSize(_window, &width, &height);
+
+    return {width, height};
 };
+
+void MultiPlatformWindow::RequestDrawSurface(std::unordered_map<SurfaceArgs, std::any> args) {
+
+    try {
+        auto vkInstance = std::any_cast<VkInstance>(args[SurfaceArgs::INSTANCE]);
+        auto* allocCallBacks = args[SurfaceArgs::ALLOCATORS].has_value() 
+          ? std::any_cast<VkAllocationCallbacks*>(args[SurfaceArgs::ALLOCATORS])
+          : nullptr; 
+        auto* outSurface = std::any_cast<VkSurfaceKHR*>(args[SurfaceArgs::OUT_SURFACE]); 
+    
+        if (glfwCreateWindowSurface(vkInstance, _window, allocCallBacks, outSurface) != VK_SUCCESS) {
+            throw new std::runtime_error("Failed to create window surface!");
+        };
+    
+    } catch (std::bad_any_cast& e) {
+        std::cerr << "Failed to cast window surface arguments" << e.what() << std::endl; 
+    }
+        
+}
 }

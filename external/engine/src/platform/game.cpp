@@ -1,6 +1,7 @@
 #include "example_engine/platform/game.hpp"
 #include "example_engine/service_locator.h"
 #include "multiplatform_window.h"
+#include "rendering/vulkan/vulkan_renderer.h"
 
 namespace ONI {
 // Constructor por defecto: Llama al constructor con un solo parámetro para inicializar el título de la ventana a "Game window"
@@ -20,7 +21,6 @@ Game::~Game() {
 // Método principal del juego. Abre la ventana con valores por defecto para el tamaño (800x600) y el título proporcionado.
 // Arranca el game loop, que continuará ejecutándose hasta que la ventana se cierre.
 void Game::run() {
-  ServiceLocator::GetWindow()->OpenWindow({.title = _title, .width = 800, .height = 600});
   
   while(_running) {
      
@@ -30,12 +30,21 @@ void Game::run() {
     }   
 
     Update(0.0f); // Actualiza el estado del juego
+
+    ServiceLocator::GetRenderer()->RenderFrame();
   }
 };
 
 // Inicializa los servicios necesarios para el juego, en este caso creando una ventana multiplataforma.
 void Game::initializeServices() {
   ServiceLocator::Provide(new MultiPlatformWindow());
+  ServiceLocator::GetWindow()->OpenWindow({.title = _title, .width = 800, .height = 600});
+  
+  RendererSettings settings {
+    .ApplicationName = _title
+  };
+
+  ServiceLocator::Provide(new VulkanRenderer(), settings);
 };
 
 // Destruye los servicios y limpia los recursos utilizados por el juego.

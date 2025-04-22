@@ -13,6 +13,8 @@ public:
     MultiPlatformWindow();
     void OpenWindow(WindowData data) override;
     bool Update() override;
+    std::pair<int, int> GetWindowExtents() override;
+    void RequestDrawSurface(std::unordered_map<SurfaceArgs, std::any> args) override;
     static inline void errorCallback(int error, const char* description){
         std::cerr << "GLFW Error" << error << description << std::endl;
     }

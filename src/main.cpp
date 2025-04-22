@@ -11,7 +11,6 @@ public:
 
 protected:
   void Update(float deltaTime) override {
-    std::cout << "I'm updating!" << std::endl;
   }
 };
 
