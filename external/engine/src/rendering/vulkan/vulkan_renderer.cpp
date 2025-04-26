@@ -18,13 +18,24 @@ namespace ONI {
     createFrameBuffers();
     createSyncStructures();
   }
-
+  void VulkanRenderer::init_core() {
+    _vulkanDevice.createInstance(_rendererSettings);
+  
+    std::unordered_map<SurfaceArgs, std::any> surfaceArgs {
+      {SurfaceArgs::INSTANCE, _vulkanDevice.getInstance()},
+      {SurfaceArgs::OUT_SURFACE, &_surface}
+    };
+  
+    ServiceLocator::GetWindow()->RequestDrawSurface(surfaceArgs);
+  
+    _vulkanDevice.buildDevice(_surface);
+  }
   void VulkanRenderer::RenderFrame() {
-    VK_CHECK(vkWaitForFences(_device, 1, &_renderFence, true, 1000000000));
-    VK_CHECK(vkResetFences(_device, 1, &_renderFence));
+    VK_CHECK(vkWaitForFences(_vulkanDevice.getDevice(), 1, &_renderFence, true, 1000000000));
+    VK_CHECK(vkResetFences(_vulkanDevice.getDevice(), 1, &_renderFence));
 
     uint32_t swapchainImageIndex;
-    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _presentSemaphore, nullptr, &swapchainImageIndex));
+    VK_CHECK(vkAcquireNextImageKHR(_vulkanDevice.getDevice(), _vulkanSwapChain.getSwapchain(), 1000000000, _presentSemaphore, nullptr, &swapchainImageIndex));
 
     VK_CHECK(vkResetCommandBuffer(_mainCommandBuffer, 0));
 
@@ -74,78 +85,38 @@ namespace ONI {
     submit.commandBufferCount = 1;
     submit.pCommandBuffers = &_mainCommandBuffer;
 
-    VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _renderFence));
+    VK_CHECK(vkQueueSubmit(_vulkanDevice.getGraphicsQueue(), 1, &submit, _renderFence));
 
     VkPresentInfoKHR presentInfoKHR {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     presentInfoKHR.swapchainCount = 1;
-    presentInfoKHR.pSwapchains = &_swapchain;
+    VkSwapchainKHR swapChains = {_vulkanSwapChain.getSwapchain()};
+    presentInfoKHR.pSwapchains = &swapChains;
 
     presentInfoKHR.waitSemaphoreCount = 1;
     presentInfoKHR.pWaitSemaphores = &_renderSemaphore;
 
     presentInfoKHR.pImageIndices = &swapchainImageIndex;
 
-    VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfoKHR));
+    VK_CHECK(vkQueuePresentKHR(_vulkanDevice.getGraphicsQueue(), &presentInfoKHR));
     _frameNumber++;
   }
-
   void VulkanRenderer::Shutdown() {
 
     for(auto frameBuffer : _frameBuffers) {
-      vkDestroyFramebuffer(_device, frameBuffer, nullptr);
+      vkDestroyFramebuffer(_vulkanDevice.getDevice(), frameBuffer, nullptr);
     }
 
-    vkDestroyCommandPool(_device, _commandPool, nullptr); 
-    vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+    vkDestroyCommandPool(_vulkanDevice.getDevice(), _commandPool, nullptr); 
+    vkDestroySwapchainKHR(_vulkanDevice.getDevice(), _vulkanSwapChain.getSwapchain(), nullptr);
 
-    for (auto _imageView : _swapchainImageViews) {
-      vkDestroyImageView(_device, _imageView, nullptr);
+    for (auto _imageView : _vulkanSwapChain.getImageViews()) {
+      vkDestroyImageView(_vulkanDevice.getDevice(), _imageView, nullptr);
     }
 
-    vkDestroyDevice(_device, nullptr);
-    vkDestroySurfaceKHR(_instance, _surface, nullptr);
-    vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
-    vkDestroyInstance(_instance, nullptr);
-  }
-
-  void VulkanRenderer::init_core() {
-    vkb::InstanceBuilder builder;
-
-    auto builtInstance = builder.set_app_name(_rendererSettings.ApplicationName.c_str())
-      .request_validation_layers(true)
-      .require_api_version(1, 2, 0)
-      .use_default_debug_messenger()
-      .build();
-
-    vkb::Instance vkb_inst = builtInstance.value();
-
-    _instance = vkb_inst.instance;
-    _debug_messenger = vkb_inst.debug_messenger;
-
-    std::unordered_map<SurfaceArgs, std::any> surfaceArgs {
-      {SurfaceArgs::INSTANCE, _instance},
-      {SurfaceArgs::OUT_SURFACE, &_surface}
-    };
-
-    ServiceLocator::GetWindow()->RequestDrawSurface(surfaceArgs);
-
-    vkb::PhysicalDeviceSelector selector {vkb_inst};
-    vkb::PhysicalDevice vkbPhysicalDevice{
-      selector
-        .set_minimum_version(1, 1)
-        .set_surface(_surface)
-        .select()
-        .value()
-    };
-
-    vkb::DeviceBuilder deviceBuilder {vkbPhysicalDevice};
-    vkb::Device vkbDevice {deviceBuilder.build().value()};
-  
-    _device = vkbDevice.device;
-    _physicalDevice = vkbPhysicalDevice.physical_device;
-
-    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+    vkDestroyDevice(_vulkanDevice.getDevice(), nullptr);
+    vkDestroySurfaceKHR(_vulkanDevice.getInstance(), _surface, nullptr);
+    vkb::destroy_debug_utils_messenger(_vulkanDevice.getInstance(), _vulkanDevice.getDebugMessenger());
+    vkDestroyInstance(_vulkanDevice.getInstance(), nullptr);
   }
   void VulkanRenderer::createSwapChain() {
 
@@ -154,34 +125,21 @@ namespace ONI {
     _windowExtent.width = width;
     _windowExtent.height = height;
 
-    vkb::SwapchainBuilder swapchainBuilder {_physicalDevice, _device, _surface};
-    vkb::Swapchain vkbSwapchain{
-      swapchainBuilder
-       .use_default_format_selection()
-       .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-       .set_desired_extent(width, height)
-       .build()
-       .value()
-    };
-
-    _swapchain = vkbSwapchain.swapchain;
-    _swapchainImages = vkbSwapchain.get_images().value();
-    _swapchainImageViews = vkbSwapchain.get_image_views().value();
-    _swapchainImageFormat = vkbSwapchain.image_format;
+    _vulkanSwapChain.buildSwapChain(width, height, _vulkanDevice.getPhysicalDevice(), _vulkanDevice.getDevice(), _surface);
   }
   void VulkanRenderer::createCommand() {
-    VkCommandPoolCreateInfo commandPoolCreateInfo = VulkanInitializer::CommandPoolCreateInfo(_graphicsQueueFamily,
+    VkCommandPoolCreateInfo commandPoolCreateInfo = VulkanInitializer::CommandPoolCreateInfo(_vulkanDevice.getGraphicsQueueFamily(),
     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    VK_CHECK(vkCreateCommandPool(_device, &commandPoolCreateInfo, nullptr, &_commandPool));
+    VK_CHECK(vkCreateCommandPool(_vulkanDevice.getDevice(), &commandPoolCreateInfo, nullptr, &_commandPool));
 
     VkCommandBufferAllocateInfo commandBufferAllocateInfo = VulkanInitializer::CommandBufferAllocateInfo(_commandPool);
 
-    VK_CHECK(vkAllocateCommandBuffers(_device, &commandBufferAllocateInfo, &_mainCommandBuffer));
+    VK_CHECK(vkAllocateCommandBuffers(_vulkanDevice.getDevice(), &commandBufferAllocateInfo, &_mainCommandBuffer));
   }
   
   void VulkanRenderer::createDefaultRenderPass() {
     VkAttachmentDescription colorAttachment{
-      .format = _swapchainImageFormat,
+      .format = _vulkanSwapChain.getImageFormat(),
       .samples = VK_SAMPLE_COUNT_1_BIT,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -208,7 +166,7 @@ namespace ONI {
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
 
-    VK_CHECK(vkCreateRenderPass(_device, &renderPassCreateInfo, nullptr, &_renderPass));
+    VK_CHECK(vkCreateRenderPass(_vulkanDevice.getDevice(), &renderPassCreateInfo, nullptr, &_renderPass));
   }
   
   void VulkanRenderer::createFrameBuffers() {
@@ -219,22 +177,24 @@ namespace ONI {
     framebufferCreateinfo.height = _windowExtent.height;
     framebufferCreateinfo.layers = 1;
 
-    const uint32_t swapChainImageCount = _swapchainImages.size();
+    const uint32_t swapChainImageCount = _vulkanSwapChain.getImages().size();
     _frameBuffers.resize(swapChainImageCount); 
 
+    std::vector<VkImageView> swapchainImageViews = _vulkanSwapChain.getImageViews(); 
+
     for (int i = 0; i < swapChainImageCount; i++) {
-      framebufferCreateinfo.pAttachments = &_swapchainImageViews[i];
-      VK_CHECK(vkCreateFramebuffer(_device, &framebufferCreateinfo, nullptr, &_frameBuffers[i]));
+      framebufferCreateinfo.pAttachments = &swapchainImageViews[i];
+      VK_CHECK(vkCreateFramebuffer(_vulkanDevice.getDevice(), &framebufferCreateinfo, nullptr, &_frameBuffers[i]));
     }
   }
   
   void VulkanRenderer::createSyncStructures() {
     VkFenceCreateInfo fenceCreateInfo {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    VK_CHECK(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_renderFence));
+    VK_CHECK(vkCreateFence(_vulkanDevice.getDevice(), &fenceCreateInfo, nullptr, &_renderFence));
 
     VkSemaphoreCreateInfo semaphoreCreateInfo {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-    VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_presentSemaphore));
-    VK_CHECK(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderSemaphore));
+    VK_CHECK(vkCreateSemaphore(_vulkanDevice.getDevice(), &semaphoreCreateInfo, nullptr, &_presentSemaphore));
+    VK_CHECK(vkCreateSemaphore(_vulkanDevice.getDevice(), &semaphoreCreateInfo, nullptr, &_renderSemaphore));
   };
 }
