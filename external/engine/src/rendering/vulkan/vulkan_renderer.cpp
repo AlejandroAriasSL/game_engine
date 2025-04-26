@@ -102,9 +102,17 @@ namespace ONI {
   }
   void VulkanRenderer::Shutdown() {
 
+    vkDeviceWaitIdle(_vulkanDevice.getDevice());
+
+    vkDestroyFence(_vulkanDevice.getDevice(), _renderFence, nullptr);
+    vkDestroySemaphore(_vulkanDevice.getDevice(), _presentSemaphore, nullptr);
+    vkDestroySemaphore(_vulkanDevice.getDevice(), _renderSemaphore, nullptr);
+
     for(auto frameBuffer : _frameBuffers) {
       vkDestroyFramebuffer(_vulkanDevice.getDevice(), frameBuffer, nullptr);
     }
+
+    vkDestroyRenderPass(_vulkanDevice.getDevice(), _renderPass, nullptr);
 
     vkDestroyCommandPool(_vulkanDevice.getDevice(), _commandPool, nullptr); 
     vkDestroySwapchainKHR(_vulkanDevice.getDevice(), _vulkanSwapChain.getSwapchain(), nullptr);
