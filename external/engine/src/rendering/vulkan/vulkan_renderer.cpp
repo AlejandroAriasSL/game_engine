@@ -17,6 +17,7 @@ namespace ONI {
     createDefaultRenderPass();
     createFrameBuffers();
     createSyncStructures();
+    createPipeLines();
   }
   void VulkanRenderer::init_core() {
     _vulkanDevice.createInstance(_rendererSettings);
@@ -68,6 +69,9 @@ namespace ONI {
 
     vkCmdBeginRenderPass(cmd, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _trianglePipeline);
+    vkCmdDraw(cmd, 3, 1, 0, 0);
+
     vkCmdEndRenderPass(cmd);
     VK_CHECK(vkEndCommandBuffer(cmd));
 
@@ -104,6 +108,8 @@ namespace ONI {
 
     vkDeviceWaitIdle(_vulkanDevice.getDevice());
 
+    vkDestroyPipeline(_vulkanDevice.getDevice(), _trianglePipeline, nullptr);
+    vkDestroyPipelineLayout(_vulkanDevice.getDevice(), _trianglePipelineLayout, nullptr);
     vkDestroyFence(_vulkanDevice.getDevice(), _renderFence, nullptr);
     vkDestroySemaphore(_vulkanDevice.getDevice(), _presentSemaphore, nullptr);
     vkDestroySemaphore(_vulkanDevice.getDevice(), _renderSemaphore, nullptr);
@@ -204,5 +210,56 @@ namespace ONI {
     VkSemaphoreCreateInfo semaphoreCreateInfo {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     VK_CHECK(vkCreateSemaphore(_vulkanDevice.getDevice(), &semaphoreCreateInfo, nullptr, &_presentSemaphore));
     VK_CHECK(vkCreateSemaphore(_vulkanDevice.getDevice(), &semaphoreCreateInfo, nullptr, &_renderSemaphore));
+  }
+  void VulkanRenderer::createPipeLines() {
+    VkShaderModule triangleFragShader;
+    if (!VulkanUtilities::loadShaderModule("shaders/triangle.frag.spv", _vulkanDevice.getDevice(), triangleFragShader)) {
+      std::cout << "Failed to load triangle fragmen shader module" << std::endl;
+    } else {
+      std::cout << "Succesfully loaded triangle fragment shader module" << std::endl;
+    }
+
+    VkShaderModule triangleVertShader;
+    if (!VulkanUtilities::loadShaderModule("shaders/triangle.vert.spv", _vulkanDevice.getDevice(), triangleVertShader)) {
+      std::cout << "Failed to load triangle vertex shader module" << std::endl;
+    } else {
+      std::cout << "Succesfully loaded triangle vertex shader module" << std::endl;
+    }
+
+    auto pipelineLayoutInfo = VulkanInitializer::PipelineLayoutCreateInfo();
+
+    VK_CHECK(vkCreatePipelineLayout(_vulkanDevice.getDevice(), &pipelineLayoutInfo, nullptr, &_trianglePipelineLayout));
+    
+    VulkanPipelineBuilder pipelineBuilder;
+    pipelineBuilder._shaderStages.push_back(
+        VulkanInitializer::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, triangleVertShader)
+    );
+    pipelineBuilder._shaderStages.push_back(
+        VulkanInitializer::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader)
+    );
+    pipelineBuilder._vertexInputInfo = VulkanInitializer::PipelineVertexInputStateCreateInfo();
+    pipelineBuilder._inputAssembly = VulkanInitializer::PipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    pipelineBuilder._viewport = {
+      .x = 0.f,
+      .y = 0.f,
+      .width = static_cast<float>(_windowExtent.width),
+      .height = static_cast<float>(_windowExtent.height),
+      .minDepth = 0.f,
+      .maxDepth = 1.f
+    };
+    pipelineBuilder._scissor = {
+      .offset {0, 0},
+      .extent {_windowExtent}
+    };
+    pipelineBuilder._rasterizer = VulkanInitializer::PipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+    pipelineBuilder._multisampling = VulkanInitializer::PipelineMultisampleStateCreateInfo();
+    pipelineBuilder._colorBlendAttachment = VulkanInitializer::PipelineColorBlendAttachmentState();
+    pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
+
+    _trianglePipeline = pipelineBuilder.buildPipeline(_vulkanDevice.getDevice(), _renderPass);
+
+    vkDestroyShaderModule(_vulkanDevice.getDevice(), triangleFragShader, nullptr);
+    vkDestroyShaderModule(_vulkanDevice.getDevice(), triangleVertShader, nullptr);
+
   };
 }

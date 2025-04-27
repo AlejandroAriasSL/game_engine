@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include "components/vulkan_swapchain.h"
 #include "components/vulkan_device.h"
+#include "components/vulkan_pipeline_builder.h"
 #include <vector>
 
 namespace ONI {
@@ -20,6 +21,7 @@ private:
   void createDefaultRenderPass();
   void createFrameBuffers();
   void createSyncStructures();
+  void createPipeLines();
 
 private:
 
@@ -40,6 +42,9 @@ private:
 
   VkSemaphore _presentSemaphore, _renderSemaphore;
   VkFence _renderFence;
+
+  VkPipelineLayout _trianglePipelineLayout;
+  VkPipeline _trianglePipeline;
 
 };
 };
