@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <vulkan/vulkan.h>
 
 #define VK_CHECK(x)                                         \
   do{                                                       \
@@ -11,6 +12,10 @@
     }                                                       \
   } while(0)                                                \
 
-class VulkanUtilities {
+namespace ONI {
+  class VulkanUtilities {
+    public:
+      static bool loadShaderModule(const std::string& filePath, VkDevice device, VkShaderModule& outShaderModule);
+  };
 
 };

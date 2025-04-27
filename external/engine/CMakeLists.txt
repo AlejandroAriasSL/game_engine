@@ -32,6 +32,20 @@ target_link_libraries(${PROJECT_NAME}
         glfw
         vk-bootstrap
 )
+
+file(GLOB SHADERS shaders/*.frag shaders/*.vert)
+
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+    COMMAND mkdir -p ${CMAKE_BINARY_DIR}/shaders
+)
+
+foreach(shader ${SHADERS})
+    get_filename_component(SHADER_NAME ${shader} NAME)
+    add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+        COMMAND glslc -c ${shader} -o ${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}.spv
+    )
+endforeach()
+
 include(FetchContent)
 FetchContent_Declare(
     googletest
