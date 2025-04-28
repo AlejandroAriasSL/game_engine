@@ -1,4 +1,5 @@
 #include "multiplatform_window.h"
+#include <example_engine/service_locator.h>
 
 namespace ONI {
 //Al incializar la ventana se asigna un null pointer a la ventana
@@ -32,6 +33,55 @@ void MultiPlatformWindow::OpenWindow(WindowData data){
     if (!_window) {
         throw std::runtime_error("Failed to create GLFW window");
     }
+
+    glfwSetWindowUserPointer(_window, &_input);
+
+    glfwSetKeyCallback(_window, [](GLFWwindow* window, int key, int scancode, int action, int mods){
+      
+      auto* input = static_cast<MultiplatformInput*>(glfwGetWindowUserPointer(window));
+
+      float value = 0.f;
+
+      switch(action){
+        case GLFW_PRESS:
+        case GLFW_REPEAT:
+          value = 1.f;
+          break;
+        default: 
+          value = 0.f;
+      }
+
+      input->updateKeyboardState(key, value);
+    });
+
+    glfwSetMouseButtonCallback(_window, [](GLFWwindow* window, int button, int action, int mods) {
+      
+      auto* input = static_cast<MultiplatformInput*>(glfwGetWindowUserPointer(window));
+
+      if(input) {
+        input->updateMouseState(button, action == GLFW_PRESS ? 1.f : 0.f);
+      }
+    });
+
+    auto* inputListener = ServiceLocator::GetInputListener();
+
+    inputListener->registerDevice(InputDevice {
+        .type = InputDeviceType::KEYBOARD,
+        .index = 0,
+        .stateFunc = std::bind(&MultiplatformInput::getKeyboardState, &_input, std::placeholders::_1)
+    });
+
+
+    inputListener->registerDevice(InputDevice {
+        .type = InputDeviceType::MOUSE,
+        .index = 0,
+        .stateFunc = std::bind(&MultiplatformInput::getMouseState, &_input, std::placeholders::_1)
+    });
+
+
+    glfwMakeContextCurrent(_window);
+
+    glfwSwapInterval(1);
 };
 
 //Este método se encarga de registrar los eventos que ocurren en la ventana mediante el contrato de GLFW
