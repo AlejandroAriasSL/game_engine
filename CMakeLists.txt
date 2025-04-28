@@ -7,5 +7,5 @@ add_subdirectory(external/engine)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 
-target_link_libraries(${PROJECT_NAME} game_engine)
-target_include_directories(${PROJECT_NAME} PRIVATE game_engine)
+target_link_libraries(${PROJECT_NAME} game)
+target_include_directories(${PROJECT_NAME} PRIVATE game)
